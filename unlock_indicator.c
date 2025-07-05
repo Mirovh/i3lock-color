@@ -1220,6 +1220,7 @@ void draw_image(uint32_t* root_resolution, cairo_surface_t *img, cairo_t* xcb_ct
 
     cairo_pattern_t *pattern = cairo_pattern_create_for_surface(img);
     cairo_pattern_set_extend(pattern, bg_type == TILE ? CAIRO_EXTEND_REPEAT : CAIRO_EXTEND_NONE);
+    cairo_pattern_set_filter(pattern, CAIRO_FILTER_NEAREST);
     cairo_set_source(xcb_ctx, pattern);
 
     double image_width = cairo_image_surface_get_width(img);
