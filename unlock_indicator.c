@@ -1024,8 +1024,8 @@ void render_lock(uint32_t *resolution, xcb_drawable_t drawable) {
 
         DEBUG("Drawing indicator on %d screens\n", screen_number);
 
-        int current_screen = screen_number == 0 ? 0 : screen_number - 1;
-        const int end_screen = screen_number == 0 ? xr_screens : screen_number;
+        int current_screen = screen_number == 0 ? 0 : screen_number;
+        const int end_screen = screen_number == 0 ? 1 : screen_number + 1;
         for (; current_screen < end_screen; current_screen++) {
             draw_data.indicator_x = 0;
             draw_data.indicator_y = 0;
@@ -1210,7 +1210,6 @@ void render_lock(uint32_t *resolution, xcb_drawable_t drawable) {
  * painted starting from 0,0. It is also scaled if bg_type is FILL, MAX, or SCALE.
  */
 void draw_image(uint32_t* root_resolution, cairo_surface_t *img, cairo_t* xcb_ctx) {
-
     if (bg_type == NONE) {
         // Don't do any image manipulation
         cairo_set_source_surface(xcb_ctx, img, 0, 0);
@@ -1227,15 +1226,24 @@ void draw_image(uint32_t* root_resolution, cairo_surface_t *img, cairo_t* xcb_ct
     double image_height = cairo_image_surface_get_height(img);
 
     for (int i = 0; i < xr_screens; i++) {
+        // If --screen flag is set (screen_number >= 0), only draw the image on that screen.
+        // Others should be filled black.
+        if (screen_number >= 0 && i != screen_number) {
+            // Fill with black
+            cairo_set_source_rgb(xcb_ctx, 0, 0, 0);
+            cairo_rectangle(xcb_ctx, xr_resolutions[i].x, xr_resolutions[i].y, xr_resolutions[i].width, xr_resolutions[i].height);
+            cairo_fill(xcb_ctx);
+            continue;
+        }
+
         // Find out scaling factors using bg_type and aspect ratios
         double scale_x = 1, scale_y = 1;
         if (bg_type == SCALE) {
             scale_x = xr_resolutions[i].width / image_width;
             scale_y = xr_resolutions[i].height / image_height;
-
         } else if (bg_type == MAX || bg_type == FILL) {
             double aspect_diff = (double) xr_resolutions[i].height / xr_resolutions[i].width - image_height / image_width;
-            if((bg_type == MAX && aspect_diff >= 0) || (bg_type == FILL && aspect_diff <= 0)) {
+            if ((bg_type == MAX && aspect_diff >= 0) || (bg_type == FILL && aspect_diff <= 0)) {
                 scale_x = scale_y = xr_resolutions[i].width / image_width;
             } else if ((bg_type == MAX && aspect_diff < 0) || (bg_type == FILL && aspect_diff > 0)) {
                 scale_x = scale_y = xr_resolutions[i].height / image_height;
